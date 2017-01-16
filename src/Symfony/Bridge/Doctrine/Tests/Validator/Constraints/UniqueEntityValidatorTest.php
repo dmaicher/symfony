@@ -574,6 +574,11 @@ class UniqueEntityValidatorTest extends AbstractConstraintValidatorTest
 
         $objectOne = new SingleIntIdNoToStringEntity(1, 'foo');
         $objectTwo = new SingleIntIdNoToStringEntity(2, 'bar');
+
+        $this->em->persist($objectOne);
+        $this->em->persist($objectTwo);
+        $this->em->flush();
+
         $entity = new CompositeObjectNoToStringIdEntity($objectOne, $objectTwo);
 
         $this->em->persist($entity);
