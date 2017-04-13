@@ -132,6 +132,7 @@ class SwitchUserListener implements ListenerInterface
         }
 
         $user = $this->provider->loadUserByUsername($username);
+        $this->userChecker->checkPreAuth($user);
         $this->userChecker->checkPostAuth($user);
 
         $roles = $user->getRoles();

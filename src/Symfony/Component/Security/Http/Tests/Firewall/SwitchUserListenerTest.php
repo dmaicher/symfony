@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Exception\DisabledException;
 use Symfony\Component\Security\Core\Role\SwitchUserRole;
 use Symfony\Component\Security\Core\User\User;
 use Symfony\Component\Security\Http\Event\SwitchUserEvent;
@@ -26,15 +27,10 @@ use Symfony\Component\Security\Http\SecurityEvents;
 class SwitchUserListenerTest extends TestCase
 {
     private $tokenStorage;
-
     private $userProvider;
-
     private $userChecker;
-
     private $accessDecisionManager;
-
     private $request;
-
     private $event;
 
     protected function setUp()
@@ -215,5 +211,31 @@ class SwitchUserListenerTest extends TestCase
 
         $this->assertSame('page=3&section=2', $this->request->server->get('QUERY_STRING'));
         $this->assertInstanceOf('Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken', $this->tokenStorage->getToken());
+    }
+
+    /**
+     * @expectedException \LogicException
+     */
+    public function testSwitchUserThrowsLogicExceptionIfUserIsDisabled()
+    {
+        $token = new UsernamePasswordToken('username', '', 'key', array('ROLE_FOO'));
+        $user = new User('username', 'password', array());
+
+        $this->tokenStorage->setToken($token);
+        $this->request->query->set('_switch_user', 'kuba');
+
+        $this->accessDecisionManager->expects($this->once())
+            ->method('decide')->with($token, array('ROLE_ALLOWED_TO_SWITCH'))
+            ->will($this->returnValue(true));
+
+        $this->userProvider->expects($this->once())
+            ->method('loadUserByUsername')->with('kuba')
+            ->will($this->returnValue($user));
+        $this->userChecker->expects($this->once())
+            ->method('checkPreAuth')->with($user)->willThrowException(new DisabledException());
+
+        $listener = new SwitchUserListener($this->tokenStorage, $this->userProvider, $this->userChecker, 'provider123', $this->accessDecisionManager);
+        $listener->handle($this->event);
+
     }
 }
