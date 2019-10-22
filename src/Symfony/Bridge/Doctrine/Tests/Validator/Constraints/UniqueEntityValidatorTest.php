@@ -25,7 +25,9 @@ use Symfony\Bridge\Doctrine\Tests\Fixtures\CompositeObjectNoToStringIdEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\DoubleNameEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\DoubleNullableNameEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\Employee;
+use Symfony\Bridge\Doctrine\Tests\Fixtures\GuidIdEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\Person;
+use Symfony\Bridge\Doctrine\Tests\Fixtures\RelationToGuidIdEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\SingleIntIdEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\SingleIntIdNoToStringEntity;
 use Symfony\Bridge\Doctrine\Tests\Fixtures\SingleIntIdStringWrapperNameEntity;
@@ -156,6 +158,8 @@ class UniqueEntityValidatorTest extends ConstraintValidatorTestCase
             $em->getClassMetadata('Symfony\Bridge\Doctrine\Tests\Fixtures\Employee'),
             $em->getClassMetadata('Symfony\Bridge\Doctrine\Tests\Fixtures\CompositeObjectNoToStringIdEntity'),
             $em->getClassMetadata('Symfony\Bridge\Doctrine\Tests\Fixtures\SingleIntIdStringWrapperNameEntity'),
+            $em->getClassMetadata('Symfony\Bridge\Doctrine\Tests\Fixtures\GuidIdEntity'),
+            $em->getClassMetadata('Symfony\Bridge\Doctrine\Tests\Fixtures\RelationToGuidIdEntity'),
         ]);
     }
 
@@ -684,6 +688,33 @@ class UniqueEntityValidatorTest extends ConstraintValidatorTestCase
             ->setCause([$entity1])
             ->setParameters(['{{ value }}' => '"Foo"'])
             ->assertRaised();
+    }
+
+    public function testValidateUniquenessOnRelatedGuidIdEntity()
+    {
+        $guidEntity = new GuidIdEntity('foo');
+        $relatedEntity = new RelationToGuidIdEntity();
+        $relatedEntity->id = 1;
+        $relatedEntity->someStringField = 'foo';
+        $relatedEntity->guidIdEntity = $guidEntity;
+
+        $this->em->persist($guidEntity);
+        $this->em->persist($relatedEntity);
+        $this->em->flush();
+
+        $anotherRelatedEntity = new RelationToGuidIdEntity();
+        $anotherRelatedEntity->someStringField = 'foo';
+        $anotherRelatedEntity->guidIdEntity = $guidEntity;
+
+        $constraint = new UniqueEntity([
+            'fields' => ['guidIdEntity', 'someStringField'],
+            'em' => self::EM_NAME,
+            'entityClass' => 'Symfony\Bridge\Doctrine\Tests\Fixtures\RelationToGuidIdEntity',
+        ]);
+
+        $this->validator->validate($anotherRelatedEntity, $constraint);
+
+        $this->assertNoViolation();
     }
 
     public function testInvalidateRepositoryForInheritance()
