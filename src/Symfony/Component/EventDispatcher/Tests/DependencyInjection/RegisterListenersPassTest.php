@@ -37,10 +37,6 @@ class RegisterListenersPassTest extends TestCase
 
     public function testValidEventSubscriber()
     {
-        $services = [
-            'my_event_subscriber' => [0 => []],
-        ];
-
         $builder = new ContainerBuilder();
         $eventDispatcherDefinition = $builder->register('event_dispatcher');
         $builder->register('my_event_subscriber', 'Symfony\Component\EventDispatcher\Tests\DependencyInjection\SubscriberService')
@@ -56,6 +52,37 @@ class RegisterListenersPassTest extends TestCase
                     'event',
                     [new ServiceClosureArgument(new Reference('my_event_subscriber')), 'onEvent'],
                     0,
+                ],
+            ],
+        ];
+        $this->assertEquals($expectedCalls, $eventDispatcherDefinition->getMethodCalls());
+    }
+
+    public function testEventSubscriberWithMultipleSameCallbacks()
+    {
+        $builder = new ContainerBuilder();
+        $eventDispatcherDefinition = $builder->register('event_dispatcher');
+        $builder->register('my_event_subscriber', 'Symfony\Component\EventDispatcher\Tests\DependencyInjection\SubscriberServiceMultipleCallbacks')
+            ->addTag('kernel.event_subscriber');
+
+        $registerListenersPass = new RegisterListenersPass();
+        $registerListenersPass->process($builder);
+
+        $expectedCalls = [
+            [
+                'addListener',
+                [
+                    'event',
+                    [new ServiceClosureArgument(new Reference('my_event_subscriber')), 'onEvent'],
+                    10,
+                ],
+            ],
+            [
+                'addListener',
+                [
+                    'event',
+                    [new ServiceClosureArgument(new Reference('my_event_subscriber')), 'onEvent'],
+                    20,
                 ],
             ],
         ];
@@ -142,6 +169,19 @@ class SubscriberService implements \Symfony\Component\EventDispatcher\EventSubsc
     {
         return [
             'event' => 'onEvent',
+        ];
+    }
+}
+
+class SubscriberServiceMultipleCallbacks implements \Symfony\Component\EventDispatcher\EventSubscriberInterface
+{
+    public static function getSubscribedEvents()
+    {
+        return [
+            'event' => [
+                ['onEvent', 10],
+                ['onEvent', 20],
+            ],
         ];
     }
 }
