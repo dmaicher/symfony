@@ -28,11 +28,19 @@ class SingleIntIdEntity
 
         #[Column(type: 'string', nullable: true)]
         public ?string $name,
+
+        #[Column(type: 'string', nullable: true)]
+        private ?string $privateName = null,
     ) {
     }
 
     public function __toString(): string
     {
         return (string) $this->name;
+    }
+
+    public function getPrivateName(): ?string
+    {
+        return $this->privateName;
     }
 }

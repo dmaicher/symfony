@@ -194,6 +194,25 @@ class UniqueEntityValidatorTest extends ConstraintValidatorTestCase
         yield 'Named arguments' => [new UniqueEntity(message: 'myMessage', fields: ['name'], em: 'foo')];
     }
 
+    public function testValidateEntityWithPrivatePropertyAndProxyObject(): void
+    {
+        $entity = new SingleIntIdEntity(1, '', 'Foo');
+        $this->em->persist($entity);
+        $this->em->flush();
+
+        $this->em->clear();
+
+        // this will load a proxy object
+        $entity = $this->em->getReference(SingleIntIdEntity::class, 1);
+
+        $this->validator->validate($entity, new UniqueEntity([
+            'fields' => ['privateName'],
+            'em' => self::EM_NAME,
+        ]));
+
+        $this->assertNoViolation();
+    }
+
     /**
      * @dataProvider provideConstraintsWithCustomErrorPath
      */
