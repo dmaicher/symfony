@@ -172,6 +172,18 @@ class PriorityTaggedServiceTraitTest extends TestCase
         $this->assertEquals($expected, $priorityTaggedServiceTraitImplementation->test($tag, $container));
     }
 
+    public function testTaggedIteratorWithDefaultNameMethod()
+    {
+        $container = new ContainerBuilder();
+        $container->register('service', ClassWithDefaultNameMethod::class)->addTag('my_custom_tag');
+
+        $priorityTaggedServiceTraitImplementation = new PriorityTaggedServiceTraitImplementation();
+
+        $tag = new TaggedIteratorArgument('my_custom_tag');
+        $services = $priorityTaggedServiceTraitImplementation->test($tag, $container);
+        self::assertEquals([new Reference('service')], $services);
+    }
+
     #[DataProvider('provideInvalidDefaultMethods')]
     public function testTheIndexedTagsByDefaultIndexMethodFailure(string $defaultIndexMethod, ?string $indexAttribute, string $expectedExceptionMessage)
     {
@@ -341,4 +353,11 @@ class MultiTagHelloNamedService
 interface HelloInterface
 {
     public static function getFooBar(): string;
+}
+
+class ClassWithDefaultNameMethod
+{
+    public function getDefaultName(): string {
+        return 'foo';
+    }
 }
